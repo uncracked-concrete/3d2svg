@@ -1,4 +1,4 @@
-import * as svg3d from "./3D2SVG.js"
+import * as svg3d from "./src/3D2SVG.js"
 
 let fTheta = 0;
 
