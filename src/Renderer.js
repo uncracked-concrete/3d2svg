@@ -1,3 +1,5 @@
+import { Vector3 } from "./Vector3D.js";
+
 class Renderer {
     constructor(parameters = {}){
         const svgcanvas = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
@@ -15,6 +17,7 @@ class Renderer {
         this.fAspectRatio =  sceneWidth / sceneHeight
         this.projMatrix = this.InitProjectionMatrix(this.fAspectRatio, fFov, fNear, fFar)
         this.domElement = canvas;
+        this.vCamera = new Vector3(0,0,0)
         this.setSize = function(width, height){
             canvas.setAttribute('width', width);
             canvas.setAttribute('height', height);
@@ -32,9 +35,7 @@ class Renderer {
             
             scene.children.forEach(child =>{
                 child.quads.forEach(quad =>{
-                    quad.edges.forEach(edge =>{   
-                        this.DrawLine([edge.x1, edge.y1, edge.z1], [edge.x2, edge.y2, edge.z2], theta)
-                    })
+                    this.DrawLine([quad.v1.x, quad.v1.y, quad.v1.z], [quad.v2.x, quad.v2.y, quad.v2.z], [quad.v3.x, quad.v3.y, quad.v3.z], [quad.v4.x, quad.v4.y, quad.v4.z], theta)
                 })
             })
         }
@@ -65,7 +66,7 @@ class Renderer {
     
         return output;
     }
-    DrawLine(p1, p2, fTheta){
+    DrawLine(p1, p2, p3, p4, fTheta){
 
         let matRotZ = [
             Math.cos(fTheta), Math.sin(fTheta),0,0,
@@ -80,41 +81,66 @@ class Renderer {
 
         p1 = this.MultiplyMatrixVector(p1, matRotZ);
         p2 = this.MultiplyMatrixVector(p2, matRotZ);
+        p3 = this.MultiplyMatrixVector(p3, matRotZ);
+        p4 = this.MultiplyMatrixVector(p4, matRotZ);
     
         p1 = this.MultiplyMatrixVector(p1, matRotX);
         p2 = this.MultiplyMatrixVector(p2, matRotX);
+        p3 = this.MultiplyMatrixVector(p3, matRotX);
+        p4 = this.MultiplyMatrixVector(p4, matRotX);
     
-        p1 = p1;
-        p2 = p2;
         p1[2] += 3.0;
         p2[2] += 3.0;
-    
-        p1 = this.MultiplyMatrixVector(p1, this.projMatrix);
-        p2 = this.MultiplyMatrixVector(p2, this.projMatrix);
-    
-    
-        p1[0] += 1;
-        p1[1] += 1;
-        p2[0] += 1;
-        p2[1] += 1;
-    
-        p1[0] *= 0.5 * this.sceneWidth;
-        p1[1] *= 0.5 * this.sceneHeight;
-        p2[0] *= 0.5 * this.sceneWidth;
-        p2[1] *= 0.5 * this.sceneHeight;
+        p3[2] += 3.0;
+        p4[2] += 3.0;
 
-        let canvas = document.getElementById("container");
-    
-        let newElement = document.createElementNS("http://www.w3.org/2000/svg", 'line'); //Create a path in SVG's namespace
-        newElement.setAttribute('x1', p1[0]);
-        newElement.setAttribute('y1', p1[1]);
-        newElement.setAttribute('x2', p2[0]);
-        newElement.setAttribute('y2', p2[1]);
-        newElement.setAttribute('stroke','black');
-        newElement.setAttribute('stroke-linecap','round');
-        newElement.setAttribute('vector-effect','non-scaling-stroke');
-        newElement.setAttribute('stroke-width','1px');
-        canvas.appendChild(newElement);
+        let line1 = new Vector3(p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2])
+        let line2 = new Vector3(p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2])
+        let normal = new Vector3(line1.y * line2.z - line1.z * line2.y, line1.z * line2.x - line1.x * line2.z, line1.x * line2.y - line1.y * line2.x)
+        let length = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z)
+        normal.x = normal.x / length;
+        normal.y = normal.y / length;
+        normal.z = normal.z / length;
+
+        if (    normal.x * (p2[0] - this.vCamera.x) + 
+                normal.y * (p2[1] - this.vCamera.y) +
+                normal.z * (p2[2] - this.vCamera.z) < 0.0){
+            p1 = this.MultiplyMatrixVector(p1, this.projMatrix);
+            p2 = this.MultiplyMatrixVector(p2, this.projMatrix);
+            p3 = this.MultiplyMatrixVector(p3, this.projMatrix);
+            p4 = this.MultiplyMatrixVector(p4, this.projMatrix);
+        
+        
+            p1[0] += 1;
+            p1[1] += 1;
+            p2[0] += 1;
+            p2[1] += 1;
+            p3[0] += 1;
+            p3[1] += 1;
+            p4[0] += 1;
+            p4[1] += 1;
+        
+            p1[0] *= 0.5 * this.sceneWidth;
+            p1[1] *= 0.5 * this.sceneHeight;
+            p2[0] *= 0.5 * this.sceneWidth;
+            p2[1] *= 0.5 * this.sceneHeight;
+            p3[0] *= 0.5 * this.sceneWidth;
+            p3[1] *= 0.5 * this.sceneHeight;
+            p4[0] *= 0.5 * this.sceneWidth;
+            p4[1] *= 0.5 * this.sceneHeight;
+
+            let canvas = document.getElementById("container");
+        
+            let newElement = document.createElementNS("http://www.w3.org/2000/svg", 'path'); //Create a path in SVG's namespace
+            newElement.setAttribute('d', `M ${p1[0]} ${p1[1]} L ${p2[0]} ${p2[1]} L ${p3[0]} ${p3[1]} L ${p4[0]} ${p4[1]} Z`);
+            newElement.setAttribute('stroke','red');
+            newElement.setAttribute('fill','none');
+            newElement.setAttribute('stroke-linecap','round');
+            newElement.setAttribute('stroke-linejoin','round');
+            newElement.setAttribute('vector-effect','non-scaling-stroke');
+            newElement.setAttribute('stroke-width','1px');
+            canvas.appendChild(newElement);
+        }
     }
 }
 

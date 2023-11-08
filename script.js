@@ -1,16 +1,16 @@
 import * as svg3d from "./src/svg3d.js"
 
-let fTheta = 0;
+let fTheta = 10;
 
-const cube = new svg3d.BoxGeometry(2,1,0.2,1,0,0);
-const cube2 = new svg3d.BoxGeometry(0.5,0.5,1,0,-1,0);
+const cube = new svg3d.BoxGeometry(1,1,1,0,0,0);
+
 const scene = new svg3d.Scene();
 const renderer = new svg3d.Renderer();
 renderer.setSize( 500, 500 );
 document.body.appendChild( renderer.domElement );
 
 scene.add(cube)
-scene.add(cube2)
+
 
 function animate(timestamp){
     fTheta += 0.1;
