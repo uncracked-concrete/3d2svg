@@ -1,5 +1,5 @@
 import { Vector3 } from "./Vector3D.js";
-
+import { Quad } from "./Quad.js";
 class Renderer {
     constructor(parameters = {}){
         const svgcanvas = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
@@ -11,32 +11,52 @@ class Renderer {
             fFov = 90,
             sceneWidth = 500,
             sceneHeight = 500,
+            renderStyle = 'solid',
+
 		} = parameters;
         this.sceneWidth = sceneWidth;
         this.sceneHeight = sceneHeight;
         this.fAspectRatio =  sceneWidth / sceneHeight
         this.projMatrix = this.InitProjectionMatrix(this.fAspectRatio, fFov, fNear, fFar)
         this.domElement = canvas;
-        this.vCamera = new Vector3(0,0,0)
+        this.renderStyle = renderStyle;
+        this.vCamera = new Vector3(0,0,0);
+        this.setBackgroundColor = function(topColor, bottomColor){
+            this.domElement.style.backgroundImage = `linear-gradient(${topColor},${bottomColor})`
+        }
         this.setSize = function(width, height){
             canvas.setAttribute('width', width);
             canvas.setAttribute('height', height);
         }
+        this.setRenderStyle = function(renderStyle){
+            this.renderStyle = renderStyle
+        }
         this.render = function(scene, camera, theta){
             let cont = this.domElement.firstElementChild;
             if(cont != undefined){
-                this.domElement.removeChild(cont);
+                this.domElement.removeChild(cont)
             }
+
+                let newElement = document.createElementNS("http://www.w3.org/2000/svg", 'g'); //Create a group in SVG's namespace
+                newElement.setAttribute('id','container');
             
-            let newElement = document.createElementNS("http://www.w3.org/2000/svg", 'g'); //Create a group in SVG's namespace
-            newElement.setAttribute('id','container');
-        
-            this.domElement.appendChild(newElement);
-            
+                this.domElement.appendChild(newElement);
+
+                
+            let quads = []
+
             scene.children.forEach(child =>{
-                child.quads.forEach(quad =>{
-                    this.DrawLine([quad.v1.x, quad.v1.y, quad.v1.z], [quad.v2.x, quad.v2.y, quad.v2.z], [quad.v3.x, quad.v3.y, quad.v3.z], [quad.v4.x, quad.v4.y, quad.v4.z], theta)
-                })
+                quads.push(...child.quads)
+            })
+
+            let has = []
+            quads.forEach(quad =>{
+                has.push(this.RotateFaces(quad, theta))
+            })
+            has.sort((z1, z2) => z2.midpoint - z1.midpoint)
+
+            has.forEach(quad =>{
+                this.DrawFace(quad.points)
             })
         }
     }
@@ -51,24 +71,52 @@ class Renderer {
         return projMatrix
     }
     MultiplyMatrixVector(input, matrix){
-        const output =[0,0,0]
+        const output = new Vector3(0,0,0)
         
-        output[0]   = input[0] * matrix[0] + input[1] * matrix[4] + input[2] * matrix[8] + matrix[12];
-        output[1]   = input[0] * matrix[1] + input[1] * matrix[5] + input[2] * matrix[9] + matrix[13];
-        output[2]   = input[0] * matrix[2] + input[1] * matrix[6] + input[2] * matrix[10] + matrix[14];
-        let w       = input[0] * matrix[3] + input[1] * matrix[7] + input[2] * matrix[11] + matrix[15];
+        output.x   = input.x * matrix[0] + input.y * matrix[4] + input.z * matrix[8] + matrix[12];
+        output.y  = input.x * matrix[1] + input.y * matrix[5] + input.z * matrix[9] + matrix[13];
+        output.z   = input.x * matrix[2] + input.y * matrix[6] + input.z * matrix[10] + matrix[14];
+        let w       = input.x * matrix[3] + input.y * matrix[7] + input.z * matrix[11] + matrix[15];
     
         if ( Math.abs(w) !=  0.0){
-            output[0] /= w;
-            output[1] /= w;
-            output[2] /= w;
+            output.x /= w;
+            output.y /= w;
+            output.z /= w;
         }
     
         return output;
     }
-    DrawLine(p1, p2, p3, p4, fTheta){
-
-        let matRotZ = [
+    VectorAdd(v1, v2){
+        return new Vector3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z)
+    }
+    VectorSubtract(v1, v2){
+        return new Vector3(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z)
+    }
+    VectorMultiply(v1, k){
+        return new Vector3(v1.x * k, v1.y * k, v1.z * k)
+    }
+    VectorDivide(v1, k){
+        return new Vector3(v1.x / k, v1.y / k, v1.z / k)
+    }
+    VectorDotProduct(v1, v2){
+        return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z
+    }
+    VectorLength(v1){
+        return Math.sqrt(this.VectorDotProduct(v1, v1))
+    }
+    VectorNormalise(v1){
+        let l = this.VectorLength(v1)
+        return new Vector3(v1.x / l, v1.y / l, v1.z / l)
+    }
+    VectorCrossProduct(v1, v2){
+        let v = new Vector3()
+        v.x = v1.y * v2.z - v1.z * v2.y
+        v.y = v1.z * v2.x - v1.x * v2.z
+        v.z = v1.x * v2.y - v1.y * v2.x
+        return v
+    }
+    RotateFaces(face, fTheta){
+         let matRotZ = [
             Math.cos(fTheta), Math.sin(fTheta),0,0,
             -Math.sin(fTheta), Math.cos(fTheta),0,0,
             0,0,1,0,
@@ -79,67 +127,88 @@ class Renderer {
             0,-Math.sin(fTheta * 0.5), Math.cos(fTheta * 0.5),0,
             0,0,0,1]
 
-        p1 = this.MultiplyMatrixVector(p1, matRotZ);
-        p2 = this.MultiplyMatrixVector(p2, matRotZ);
-        p3 = this.MultiplyMatrixVector(p3, matRotZ);
-        p4 = this.MultiplyMatrixVector(p4, matRotZ);
-    
-        p1 = this.MultiplyMatrixVector(p1, matRotX);
-        p2 = this.MultiplyMatrixVector(p2, matRotX);
-        p3 = this.MultiplyMatrixVector(p3, matRotX);
-        p4 = this.MultiplyMatrixVector(p4, matRotX);
-    
-        p1[2] += 3.0;
-        p2[2] += 3.0;
-        p3[2] += 3.0;
-        p4[2] += 3.0;
+        let rotatedPoints =[]
+        face.points.forEach(vector =>{
+            let vec = new Vector3()
+            vec = this.MultiplyMatrixVector(vector, matRotZ);
+            vec = this.MultiplyMatrixVector(vec, matRotX);
+            vec.z += 5.0;
+            rotatedPoints.push(vec)
+        })
+        let midpoint = 0
 
-        let line1 = new Vector3(p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2])
-        let line2 = new Vector3(p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2])
-        let normal = new Vector3(line1.y * line2.z - line1.z * line2.y, line1.z * line2.x - line1.x * line2.z, line1.x * line2.y - line1.y * line2.x)
-        let length = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z)
-        normal.x = normal.x / length;
-        normal.y = normal.y / length;
-        normal.z = normal.z / length;
+        if (rotatedPoints.length == 3){
+            midpoint=  (rotatedPoints[0].z + rotatedPoints[1].z + rotatedPoints[2].z) /3.0
+        }
+        else{
+            midpoint=   (rotatedPoints[0].z + rotatedPoints[1].z + rotatedPoints[2].z + rotatedPoints[3].z) /4.0
+        }
+        return new Quad(rotatedPoints, midpoint)
+    }
+    DrawFace(face){  
+        let rotatedPoints = face;      
+        let normal = new Vector3(0,0,0)
+        if (this.renderStyle != 'wireframe'){
+            let line1 = this.VectorSubtract(rotatedPoints[1], rotatedPoints[0])
+            let line2 = this.VectorSubtract(rotatedPoints[2], rotatedPoints[0])
+            normal = this.VectorCrossProduct(line1, line2)
+            normal = this.VectorNormalise(normal)
+        }
+        let vCameraRay = this.VectorSubtract(rotatedPoints[2], this.vCamera)
+        if (this.renderStyle == 'wireframe' || this.VectorDotProduct(normal, vCameraRay) < 0.0){
 
-        if (    normal.x * (p2[0] - this.vCamera.x) + 
-                normal.y * (p2[1] - this.vCamera.y) +
-                normal.z * (p2[2] - this.vCamera.z) < 0.0){
-            p1 = this.MultiplyMatrixVector(p1, this.projMatrix);
-            p2 = this.MultiplyMatrixVector(p2, this.projMatrix);
-            p3 = this.MultiplyMatrixVector(p3, this.projMatrix);
-            p4 = this.MultiplyMatrixVector(p4, this.projMatrix);
-        
-        
-            p1[0] += 1;
-            p1[1] += 1;
-            p2[0] += 1;
-            p2[1] += 1;
-            p3[0] += 1;
-            p3[1] += 1;
-            p4[0] += 1;
-            p4[1] += 1;
-        
-            p1[0] *= 0.5 * this.sceneWidth;
-            p1[1] *= 0.5 * this.sceneHeight;
-            p2[0] *= 0.5 * this.sceneWidth;
-            p2[1] *= 0.5 * this.sceneHeight;
-            p3[0] *= 0.5 * this.sceneWidth;
-            p3[1] *= 0.5 * this.sceneHeight;
-            p4[0] *= 0.5 * this.sceneWidth;
-            p4[1] *= 0.5 * this.sceneHeight;
+                let dp = 0;
+                if(this.renderStyle == 'solid'){
+                let lightDirection = new Vector3(0, 0, -1)
+                lightDirection = this.VectorNormalise(lightDirection)
 
-            let canvas = document.getElementById("container");
-        
+                dp = this.VectorDotProduct(lightDirection, normal)
+                    
+                }
+
+                let projectedPoints =[]
+                rotatedPoints.forEach(vector =>{
+                    let vec = new Vector3()
+                    vec = this.MultiplyMatrixVector(vector, this.projMatrix);
+                    vec.x += 1
+                    vec.y += 1
+                    vec.x *= 0.5 * this.sceneWidth;
+                    vec.y *= 0.5 * this.sceneHeight;
+                    projectedPoints.push(vec)
+                })
+
+            
+
+            let container = document.getElementById("container");
             let newElement = document.createElementNS("http://www.w3.org/2000/svg", 'path'); //Create a path in SVG's namespace
-            newElement.setAttribute('d', `M ${p1[0]} ${p1[1]} L ${p2[0]} ${p2[1]} L ${p3[0]} ${p3[1]} L ${p4[0]} ${p4[1]} Z`);
-            newElement.setAttribute('stroke','red');
-            newElement.setAttribute('fill','none');
+            let pathString = 'M '
+            projectedPoints.forEach(vector =>{
+                pathString += vector.x
+                pathString += ' '
+                pathString += vector.y
+                pathString += ' L '
+            })
+            pathString = pathString.slice(0, -2)
+            pathString += 'Z'
+
+            newElement.setAttribute('d', pathString);
+            if(this.renderStyle == 'wireframe'){
+                newElement.setAttribute('stroke','black');
+                newElement.setAttribute('fill','none');
+            }
+            else if(this.renderStyle == 'edges'){
+                newElement.setAttribute('stroke','black');
+                newElement.setAttribute('fill','white');
+            }
+            else if(this.renderStyle == 'solid'){
+                newElement.setAttribute('fill',`hsl(0,0%,${(dp * 100)}%)`);
+            }
+            
             newElement.setAttribute('stroke-linecap','round');
             newElement.setAttribute('stroke-linejoin','round');
             newElement.setAttribute('vector-effect','non-scaling-stroke');
-            newElement.setAttribute('stroke-width','1px');
-            canvas.appendChild(newElement);
+            newElement.setAttribute('stroke-width','0.5px');
+            container.appendChild(newElement);
         }
     }
 }
