@@ -6,9 +6,6 @@ class Renderer {
         svgcanvas.style.display = 'block';
         const {
 			canvas = svgcanvas,
-            fNear = 0.1,
-            fFar = 1000,
-            fFov = 90,
             sceneWidth = 500,
             sceneHeight = 500,
             renderStyle = 'solid',
@@ -16,8 +13,6 @@ class Renderer {
 		} = parameters;
         this.sceneWidth = sceneWidth;
         this.sceneHeight = sceneHeight;
-        this.fAspectRatio =  sceneWidth / sceneHeight
-        this.projMatrix = this.InitProjectionMatrix(this.fAspectRatio, fFov, fNear, fFar)
         this.domElement = canvas;
         this.renderStyle = renderStyle;
         this.vCamera = new Vector3(0,0,0);
@@ -56,19 +51,9 @@ class Renderer {
             has.sort((z1, z2) => z2.midpoint - z1.midpoint)
 
             has.forEach(quad =>{
-                this.DrawFace(quad.points)
+                this.DrawFace(quad.points, camera.projectionMatrix)
             })
         }
-    }
-    InitProjectionMatrix(fAspectRatio, fFov, fNear, fFar){
-        let fFovRad = 1.0 / Math.tan(fFov * 0.5 / 180 * Math.PI)
-        let projMatrix = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-        projMatrix[0] = fAspectRatio * fFovRad;
-        projMatrix[5] = fFovRad;
-        projMatrix[10] = fFar / (fFar - fNear);
-        projMatrix[14] = (-fFar * fNear) / (fFar - fNear);
-        projMatrix[11] = 1
-        return projMatrix
     }
     MultiplyMatrixVector(input, matrix){
         const output = new Vector3(0,0,0)
@@ -145,7 +130,7 @@ class Renderer {
         }
         return new Quad(rotatedPoints, midpoint)
     }
-    DrawFace(face){  
+    DrawFace(face, projectionMatrix){  
         let rotatedPoints = face;      
         let normal = new Vector3(0,0,0)
         if (this.renderStyle != 'wireframe'){
@@ -158,7 +143,7 @@ class Renderer {
         if (this.renderStyle == 'wireframe' || this.VectorDotProduct(normal, vCameraRay) < 0.0){
 
                 let dp = 0;
-                if(this.renderStyle == 'solid'){
+                if(this.renderStyle == 'solid' || this.renderStyle == 'solid lines'){
                 let lightDirection = new Vector3(0, 0, -1)
                 lightDirection = this.VectorNormalise(lightDirection)
 
@@ -169,7 +154,7 @@ class Renderer {
                 let projectedPoints =[]
                 rotatedPoints.forEach(vector =>{
                     let vec = new Vector3()
-                    vec = this.MultiplyMatrixVector(vector, this.projMatrix);
+                    vec = this.MultiplyMatrixVector(vector, projectionMatrix);
                     vec.x += 1
                     vec.y += 1
                     vec.x *= 0.5 * this.sceneWidth;
@@ -201,6 +186,10 @@ class Renderer {
                 newElement.setAttribute('fill','white');
             }
             else if(this.renderStyle == 'solid'){
+                newElement.setAttribute('fill',`hsl(0,0%,${(dp * 100)}%)`);
+            }
+            else if(this.renderStyle == 'solid lines'){
+                newElement.setAttribute('stroke','black');
                 newElement.setAttribute('fill',`hsl(0,0%,${(dp * 100)}%)`);
             }
             
