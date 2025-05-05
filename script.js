@@ -7,6 +7,8 @@ const box = new svg3d.Box(1,1,1)
 const cube = new svg3d.Mesh(box)
 const pyr = new svg3d.Pyramid(1,1,1)
 const los = new svg3d.Mesh(pyr)
+const extr = new svg3d.Extrusion([new svg3d.Vector3(4,4,0), new svg3d.Vector3(4,5,0), new svg3d.Vector3(5,5,0), new svg3d.Vector3(5,4.5,0), new svg3d.Vector3(4.5,4.5,0), new svg3d.Vector3(4.5,4,0)], 1.5)
+const extrm = new svg3d.Mesh(extr)
 const scene = new svg3d.Scene();
 
 const container = document.body;
@@ -17,7 +19,7 @@ const near = 0.1; // the near clipping plane
 const far = 1000; // the far clipping plane
 
 const camera = new svg3d.PerspectiveCamera(fov, aspect, near, far);
-console.log(container.clientHeight)
+
 const renderer = new svg3d.Renderer({renderStyle: 'edges',});
 renderer.setSize( container.clientWidth, container.clientHeight );
 renderer.setBackgroundColor( 'white', 'gainsboro' );
@@ -26,6 +28,7 @@ container.appendChild( renderer.domElement );
 cube.setPosition(new svg3d.Vector3(1.3,1.3,0))
 scene.add(los)
 scene.add(cube)
+//scene.add(extrm)
 
 let parameters = [
   {check: false, renderStyle: "wireframe"},
@@ -49,7 +52,7 @@ function setChecked( prop ) {
   }
 
 function animate(timestamp){
-    fTheta += 0.1;
+    fTheta += 0.03;
 
     const fps = 60;
 
@@ -59,3 +62,11 @@ function animate(timestamp){
     renderer.render(scene, camera, fTheta);
 }
 animate();
+
+
+window.addEventListener('resize', () => {
+  camera.aspectRatio = container.clientWidth / container.clientHeight;
+  camera.UpdateProjectionMatrix();
+  renderer.setSize( container.clientWidth,  container.clientHeight);
+  });
+  

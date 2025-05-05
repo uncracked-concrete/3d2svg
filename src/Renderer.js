@@ -4,15 +4,11 @@ class Renderer {
     constructor(parameters = {}){
         const svgcanvas = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
         svgcanvas.style.display = 'block';
+        svgcanvas.setAttribute("shape-rendering", "crispEdges");
         const {
 			canvas = svgcanvas,
-            sceneWidth = 500,
-            sceneHeight = 500,
             renderStyle = 'solid',
-
 		} = parameters;
-        this.sceneWidth = sceneWidth;
-        this.sceneHeight = sceneHeight;
         this.domElement = canvas;
         this.renderStyle = renderStyle;
         this.vCamera = new Vector3(0,0,0);
@@ -21,7 +17,9 @@ class Renderer {
         }
         this.setSize = function(width, height){
             canvas.setAttribute('width', width);
+            this.sceneWidth = width;
             canvas.setAttribute('height', height);
+            this.sceneHeight = height;
         }
         this.setRenderStyle = function(renderStyle){
             this.renderStyle = renderStyle
