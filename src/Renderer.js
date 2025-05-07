@@ -4,13 +4,17 @@ class Renderer {
     constructor(parameters = {}){
         const svgcanvas = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
         svgcanvas.style.display = 'block';
-        svgcanvas.setAttribute("shape-rendering", "crispEdges");
+        //svgcanvas.setAttribute("shape-rendering", "crispEdges");
         const {
 			canvas = svgcanvas,
             renderStyle = 'solid',
 		} = parameters;
         this.domElement = canvas;
         this.renderStyle = renderStyle;
+        this.lowerBound = 0;
+        this.upperBound = 100;
+        this.steps = 0;
+        this.strokeWidth = 0.5;
         this.vCamera = new Vector3(0,0,0);
         this.setBackgroundColor = function(topColor, bottomColor){
             this.domElement.style.backgroundImage = `linear-gradient(${topColor},${bottomColor})`
@@ -23,6 +27,14 @@ class Renderer {
         }
         this.setRenderStyle = function(renderStyle){
             this.renderStyle = renderStyle
+        }
+        this.setShadingStyle = (lowerBound, upperBound, steps) => {
+            this.lowerBound = lowerBound,
+            this.upperBound = upperBound,
+            this.steps = steps
+        }
+        this.setStrokeWidth = (width) => {
+            this.strokeWidth = width
         }
         this.render = function(scene, camera, theta){
             let cont = this.domElement.firstElementChild;
@@ -184,20 +196,36 @@ class Renderer {
                 newElement.setAttribute('fill','white');
             }
             else if(this.renderStyle == 'solid'){
-                newElement.setAttribute('fill',`hsl(0,0%,${(dp * 100)}%)`);
+                const colorPercentage = this.ConvertToColor(dp)
+                newElement.setAttribute('fill',`hsl(200,10%,${(colorPercentage)}%)`);
             }
             else if(this.renderStyle == 'solid lines'){
                 newElement.setAttribute('stroke','black');
-                newElement.setAttribute('fill',`hsl(0,0%,${(dp * 100)}%)`);
+                const colorPercentage = this.ConvertToColor(dp)
+                newElement.setAttribute('fill',`hsl(200,10%,${(colorPercentage)}%)`);
             }
             
             newElement.setAttribute('stroke-linecap','round');
             newElement.setAttribute('stroke-linejoin','round');
             newElement.setAttribute('vector-effect','non-scaling-stroke');
-            newElement.setAttribute('stroke-width','0.5px');
+            newElement.setAttribute('stroke-width',`${this.strokeWidth}px`);
             container.appendChild(newElement);
         }
     }
+    ConvertToColor(value) {
+        let scaledValue = this.lowerBound + (this.upperBound - this.lowerBound) * value;
+        
+        if (this.steps > 0){
+            let stepSize = (this.upperBound - this.lowerBound) / (this.steps - 1);
+            for (let i = 0; i < this.steps; i++) {
+                if (scaledValue <= this.lowerBound + i * stepSize) {
+                    scaledValue = this.lowerBound + i * stepSize;
+                    break;
+                }
+            }
+        }
+        return scaledValue;
+    } 
 }
 
 export {Renderer};
