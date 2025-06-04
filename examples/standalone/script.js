@@ -1,4 +1,4 @@
-import * as svg3d from "./src/svg3d.js"
+import * as svg3d from "../../src/svg3d.js"
 import dat from 'https://cdn.skypack.dev/dat.gui';
 
 let fTheta = 13.3;
@@ -19,16 +19,17 @@ const near = 0.1; // the near clipping plane
 const far = 1000; // the far clipping plane
 
 const camera = new svg3d.PerspectiveCamera(fov, aspect, near, far);
+camera.position = new svg3d.Vector3(0,0,10)
 
 const renderer = new svg3d.Renderer({renderStyle: 'edges',});
 renderer.setSize( container.clientWidth, container.clientHeight );
 renderer.setBackgroundColor( 'white', 'gainsboro' );
 container.appendChild( renderer.domElement );
 
-cube.setPosition(new svg3d.Vector3(1.3,1.3,0))
+los.setPosition(new svg3d.Vector3(1.3,1.3,0))
 scene.add(los)
-scene.add(cube)
-scene.add(extrm)
+//scene.add(cube)
+//scene.add(extrm)
 
 let parameters = [
   {check: false, renderStyle: "wireframe"},
@@ -73,17 +74,34 @@ function updateBounds() {
 }
   
 
-function animate(timestamp){
-    fTheta += 0.03;
+let lastTimestamp = 0;
 
-    const fps = 60;
+function animate(timestamp) {
+    const deltaTime = (timestamp - lastTimestamp) / 1000; // in seconds
+    lastTimestamp = timestamp;
 
-    setTimeout(() => {
-        requestAnimationFrame(animate);
-      }, 1000 / fps);
-    renderer.render(scene, camera, fTheta);
+    fTheta += 0.03;
+console.log(camera.position.y)
+    // Example camera movement
+    if (keys['ArrowUp']) {
+        camera.position.y += 8.0 * deltaTime;
+    }
+    if (keys['ArrowDown']) {
+        camera.position.y -= 8.0 * deltaTime;
+    }
+    if (keys['ArrowLeft']) {
+        camera.position.x -= 8.0 * deltaTime;
+    }
+    if (keys['ArrowRight']) {
+        camera.position.x += 8.0 * deltaTime;
+    }
+
+    renderer.render(scene, camera, fTheta);
+    requestAnimationFrame(animate);
 }
-animate();
+
+requestAnimationFrame(animate);
+
 
 
 window.addEventListener('resize', () => {
@@ -91,4 +109,19 @@ window.addEventListener('resize', () => {
   camera.UpdateProjectionMatrix();
   renderer.setSize( container.clientWidth,  container.clientHeight);
   });
+
+  
+const keys = {};
+
+window.addEventListener('keydown', (e) => {
+  console.log("up")
+    keys[e.code] = true;
+
+});
+
+window.addEventListener('keyup', (e) => {
+  console.log("up")
+    keys[e.code] = false;
+});
+
   

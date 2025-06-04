@@ -1,3 +1,6 @@
+import {Matrix4} from './Matrix4.js'
+import { Vector3 } from './Vector3D.js'
+
 class PerspectiveCamera{
     constructor(fov = 50, aspectRatio = 1, near = 0.1, far = 2000){
         this.fov = fov
@@ -6,6 +9,8 @@ class PerspectiveCamera{
         this.far = far
         this.projectionMatrix = null
         this.UpdateProjectionMatrix()
+        this.projectionMatrix = new Matrix4();
+        this.position = new Vector3(0,0,0);
     }
     UpdateProjectionMatrix(){
         let fFovRad = 1.0 / Math.tan(this.fov * 0.5 / 180 * Math.PI)
@@ -15,7 +20,7 @@ class PerspectiveCamera{
         projMatrix[10] = -(this.far + this.near) / (this.far - this.near);
         projMatrix[11] = -1;
         projMatrix[14] = -(2 * this.far * this.near) / (this.far - this.near)
-        this.projectionMatrix = projMatrix
+        this.projectionMatrix = new Matrix4().fromArray(projMatrix);
     }
 }
 export {PerspectiveCamera};
