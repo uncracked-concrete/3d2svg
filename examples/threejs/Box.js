@@ -1,7 +1,7 @@
 import { Object3D, Vector3 } from 'three';
-import {Point} from "../../src/Point.js";
-import {Line} from "../../src/Line.js";
-import { Face } from "../../src/Face.js";
+import {Point} from "./../../src/Point.js";
+import {Line} from "./../../src/Line.js";
+import { Face } from "./../../src/Face.js";
 import { Geometry } from './Geometry.js';
 import { ThreeMesh} from './ThreeMesh.js';
 
