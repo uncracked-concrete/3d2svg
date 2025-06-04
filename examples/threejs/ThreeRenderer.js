@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Quad } from "./../../src/Quad.js";
+import { Quad } from "./Quad.js";
 
 class ThreeRenderer {
   constructor({ canvas = null, renderStyle = "wireframe" } = {}) {
